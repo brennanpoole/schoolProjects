@@ -112,6 +112,7 @@ The next assumption is Independence, to check this I used the VIF function I fou
 researching for this project that helps show which variables may have multicollinearity. 
 
 ![VIF table](./Project%20Images/18.png) 
+
 It can be seen here by looking at the adjusted VIF values, which is the column on the far right, that there appears to be no multicollinearity in this model. Generally, this adjusted VIF value is compared to base values of 5 or 10 to determine if a variable is causing problems with independence, but all these values being below 5 is a good sign for the model's independence.
 
 The third assumption of homeoscedasticity was where I ran into some trouble, when checking
