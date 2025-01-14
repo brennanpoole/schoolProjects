@@ -1,0 +1,243 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+#Libraries
+
+library(MASS)
+library(car)
+```
+
+
+```{r}
+#Data set with structure and summary
+NFLData_raw <- read.csv("ProjectData.csv", header=TRUE, sep=",")
+NFLData <- NFLData_raw[-c(53,54,66,81,85,98,115,164,173,189,197),-c(2,4,5,9,12,13,14,16,17,20,21,22)]
+NFLData
+
+#Changing Pos, PB, and AP into factor variables
+NFLData$Pos <- as.factor(NFLData$Pos)
+NFLData$PB <- as.factor(NFLData$PB)
+NFLData$AP <- as.factor(NFLData$AP)
+
+
+str(NFLData)
+summary(NFLData)
+```
+
+```{r}
+#Histograms and Added Variable Plot
+
+hist(NFLData$Tgt, main = "Distribution of Targets", xlab="Touchdowns")
+hist(NFLData$TD, main = "Distribution of Touchdowns", xlab="Targets")
+
+#Performing Logrithmic transformation on Tgt and TD and removing those variables from the dataset
+NFLData$lnTD <- log(NFLData$TD)
+NFLData$lnTgt <- log(NFLData$Tgt)
+NFLData <- NFLData[,-c(3,6)]
+
+#Histograms of all continuous variables
+hist(NFLData$Rec, main = "Distribution of Receptions", xlab="Receptions")
+hist(NFLData$lnTgt, main = "Distribution of Natural Log of Targets", xlab="ln(Targets)")
+hist(NFLData$Yds, main = "Distribution of Yards", xlab="Yards")
+hist(NFLData$Age, main = "Distribution of Age", xlab="Age")
+hist(NFLData$X1D, main = "Distribution of Catches for First Downs", xlab="First Down Catches")
+hist(NFLData$Ctch., main = "Distribution of Catch Percentage", xlab="Catch Percentage")
+hist(NFLData$lnTD, main = "Distribution of Natural Log of Touch Downs", xlab="ln(Touchdowns)")
+
+
+#Boxplots for factor variables
+plot(NFLData$PB,NFLData$Rec, ylab="Receptions", xlab="Made Pro Bowl", main="Receptions vs Pro Bowl")
+plot(NFLData$AP,NFLData$Rec, ylab="Receptions", xlab="Made All Pro", main="Receptions vs All Pro")
+plot(NFLData$Pos,NFLData$Rec, ylab="Receptions", xlab="Position", main="Receptions vs Position")
+
+#Distributions of Factor variables in table format
+table(NFLData$Pos)
+table(NFLData$PB)
+table(NFLData$AP)
+
+
+#Added Variable Plot and correlation table
+pairs(~  NFLData$lnTgt + NFLData$Yds + NFLData$Age + NFLData$X1D + NFLData$Ctch. + NFLData$lnTD + NFLData$Rec , upper.panel=NULL, gap=0)
+cor(NFLData[,-c(2,7,8)])
+```
+
+```{r}
+#Full Model with all Summary Measures, assumption plots, and vif table
+fullmodel <- lm(Rec ~ Age + Pos + lnTgt + Yds + lnTD + X1D + Ctch. + PB + AP, data=NFLData)
+summary(fullmodel)
+
+summary(fullmodel)$r.squared
+summary(fullmodel)$adj.r.squared
+summary(fullmodel)$sigma
+
+plot(fullmodel)
+vif(fullmodel)
+
+
+#Performing logrithmic transformation on Rec and removing it from the dataset
+NFLData$lnRec <- log(NFLData$Rec)
+NFLData <- NFLData[,-c(3)]
+
+
+#New Full Model with transformation on target variable
+fullmodel2 <- lm(lnRec ~ Age + Pos + lnTgt + Yds + lnTD + X1D + Ctch. + PB + AP, data=NFLData)
+summary(fullmodel2)
+
+summary(fullmodel2)$r.squared
+summary(fullmodel2)$adj.r.squared
+summary(fullmodel2)$sigma
+
+
+#Correlation table, assumption plots, VIF table, and added variable plot for new full model
+plot(fullmodel2)
+cor(NFLData[,-c(2,6,7)])
+pairs(~  NFLData$lnTgt + NFLData$Yds + NFLData$Age + NFLData$X1D + NFLData$Ctch. + NFLData$lnTD + NFLData$lnRec , upper.panel=NULL, gap=0)
+vif(fullmodel2)
+
+
+```
+
+
+
+```{r}
+#Standardized residual, leverage, and cook's distance for all 3 outliers
+
+#Model with observation 49
+outliermodel1 <- lm(lnRec~.,data=NFLData, subset=-c(76,97))
+
+rstandard(outliermodel1)[49]
+hatvalues(outliermodel1)[49]
+cooks.distance(outliermodel1)[49]
+
+
+#Model with observation 76
+outliermodel2 <- lm(lnRec~.,data=NFLData, subset=-c(49,97))
+
+rstandard(outliermodel1)[76]
+hatvalues(outliermodel1)[76]
+cooks.distance(outliermodel1)[76]
+
+#Model with observation 97
+outliermodel3 <- lm(lnRec~.,data=NFLData, subset=-c(49,76))
+
+rstandard(outliermodel1)[97]
+hatvalues(outliermodel1)[97]
+cooks.distance(outliermodel1)[97]
+
+qf(.95,10,187)
+```
+
+```{r}
+#Confidence Interval
+
+samplemean <- mean(exp(NFLData$lnRec))
+samplesd <- sd(exp(NFLData$lnRec))
+samplesize <- length(NFLData$lnRec)
+samplese <- samplesd/sqrt(samplesize)
+
+t <- qt(.975, df=(samplesize-1))
+
+lowerbound <- samplemean - (t*samplese)
+upperbound <- samplemean + (t*samplese)
+
+interval <- c(lowerbound, upperbound)
+interval
+
+
+```
+
+```{r}
+#Forward Selection
+nullmodel <- lm(lnRec ~ 1, data=NFLData)
+
+#AIC as selection criteria
+stepAIC(nullmodel, scope = list(lower=nullmodel, upper=fullmodel2), k=2, direction = "forward")
+
+forwardmodel <- stepAIC(nullmodel, scope = list(lower=nullmodel, upper=fullmodel2), k=2, direction = "forward")
+forwardmodel
+
+summary(forwardmodel)
+
+summary(forwardmodel)$r.squared
+summary(forwardmodel)$adj.r.squared
+summary(forwardmodel)$sigma
+
+
+#BIC as selection criteria
+stepAIC(nullmodel, scope = list(lower=nullmodel, upper=fullmodel2), k=log(187), direction = "forward")
+
+forwardmodel2 <- stepAIC(nullmodel, scope = list(lower=nullmodel, upper=fullmodel2), k=log(187), direction = "forward")
+forwardmodel2
+
+summary(forwardmodel2)
+
+summary(forwardmodel2)$r.squared
+summary(forwardmodel2)$adj.r.squared
+summary(forwardmodel2)$sigma
+
+```
+
+
+```{r}
+#Backwards Selection
+
+#AIC as selection criteria
+stepAIC(fullmodel2, scope = list(lower=nullmodel, upper=fullmodel2), k=2, direction = "backward")
+
+backwardsmodel <- stepAIC(fullmodel2, scope = list(lower=nullmodel, upper=fullmodel2), k=2, direction = "backward")
+backwardsmodel
+
+summary(backwardsmodel)
+
+summary(backwardsmodel)$r.squared
+summary(backwardsmodel)$adj.r.squared
+summary(backwardsmodel)$sigma
+
+
+
+#BIC as selection criteria
+stepAIC(fullmodel2, scope = list(lower=nullmodel, upper=fullmodel2), k=log(length(NFLData$lnRec)), direction = "backward")
+
+backwardsmodel2 <- stepAIC(fullmodel2, scope = list(lower=nullmodel, upper=fullmodel2), k=log(length(NFLData$lnRec)), direction = "backward")
+backwardsmodel2
+
+summary(backwardsmodel2)
+
+summary(backwardsmodel2)$r.squared
+summary(backwardsmodel2)$adj.r.squared
+summary(backwardsmodel2)$sigma
+
+```
+
+
+```{r}
+#Model Selection
+
+#Full Model
+AIC(fullmodel2)
+BIC(fullmodel2)
+summary(fullmodel2)$adj.r.squared
+
+#Stepwise Model
+AIC(forwardmodel)
+BIC(forwardmodel)
+summary(forwardmodel)$adj.r.squared
+
+#Handpicked Model with variables with high correlation
+model3 <- lm(lnRec ~ Yds + X1D + lnTD + lnTgt, data=NFLData)
+summary(model3)  
+
+AIC(model3)
+BIC(model3)
+summary(model3)$adj.r.squared
+
+#Handpicked Model with added interaction term
+model4 <- lm(lnRec ~ Yds + X1D + lnTD + lnTgt + Yds*lnTD, data=NFLData)
+summary(model4)
+
+AIC(model4)
+BIC(model4)
+summary(model4)$adj.r.squared
+
+```
