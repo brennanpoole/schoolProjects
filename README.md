@@ -1,5 +1,4 @@
 # Regression Analysis Project
-### Brennan Poole
 
 ## Section 1: Introduction
   For my project, I’ve decided to take a statistical deep dive into one of my favorite
@@ -112,7 +111,8 @@ against the target variable.
 The next assumption is Independence, to check this I used the VIF function I found while
 researching for this project that helps show which variables may have multicollinearity. 
 
-![VIF table](./Project%20Images/18.png) ![VIF explanation](./Project%20Images/19.png)
+![VIF table](./Project%20Images/18.png) 
+It can be seen here by looking at the adjusted VIF values, which is the column on the far right, that there appears to be no multicollinearity in this model. Generally, this adjusted VIF value is compared to base values of 5 or 10 to determine if a variable is causing problems with independence, but all these values being below 5 is a good sign for the model's independence.
 
 The third assumption of homeoscedasticity was where I ran into some trouble, when checking
 for this assumption you must look at the graph of residuals vs fitted values for the model. For the model to pass the assumption, this graph should show to have basically no pattern, however
